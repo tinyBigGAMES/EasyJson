@@ -481,6 +481,157 @@ begin
     LJson.Free;
   end;
 end;
+
+(*=============================================================================
+  Test09: Clearing a JSON Object
+  This procedure demonstrates how to use the `Clear()` method in TEasyJson
+  to remove all key-value pairs from a JSON object.
+
+  The initial JSON structure:
+  {
+    "name": "Alice",
+    "age": 25
+  }
+
+  After calling `Clear()`:
+  {}
+
+  Steps performed:
+  - A TEasyJson instance is created.
+  - Key-value pairs "name" and "age" are set.
+  - The JSON structure is printed before clearing.
+  - The `Clear()` method is called to remove all data.
+  - The empty JSON object is printed.
+
+  Expected Output:
+  - JSON before clear: {"name":"Alice","age":25}
+  - JSON after clear: {}
+
+  NOTE: This example highlights the ability of TEasyJson to reset an object
+        without needing to create a new instance.
+==============================================================================*)
+procedure Test09();
+var
+  LJson: TEasyJson;
+begin
+  // Create an instance of TEasyJson
+  LJson := TEasyJson.Create();
+  try
+    // Set initial key-value pairs
+    LJson.&Set('name', 'Alice').&Set('age', 25);
+
+    // Print the JSON object before clearing
+    WriteLn('JSON Object before clear:');
+    WriteLn(LJson.Format); // Outputs JSON with data
+    WriteLn;
+
+    // Clear the JSON object
+    LJson.Clear();
+
+    // Print the JSON object after clearing
+    WriteLn('JSON Object after clear:');
+    WriteLn(LJson.Format); // Outputs: {}
+  finally
+    // Free the JSON object to prevent memory leaks
+    LJson.Free();
+  end;
+end;
+
+(*=============================================================================
+  Test10: Saving a JSON Object to a File
+  This procedure demonstrates how to save a JSON object to a file using the
+  `SaveToFile()` method in TEasyJson.
+
+  The JSON structure being saved:
+  {
+    "name": "Alice",
+    "age": 25
+  }
+
+  Steps performed:
+  - A TEasyJson instance is created.
+  - Key-value pairs "name" and "age" are set.
+  - The formatted JSON structure is printed.
+  - The JSON object is saved to a file named "data.json".
+  - A success or failure message is printed based on the save operation.
+
+  Expected Output:
+  - JSON object printed to console.
+  - Confirmation message indicating whether the file was saved successfully.
+
+  NOTE: This example highlights how TEasyJson allows easy persistence of
+        JSON data to an external file.
+==============================================================================*)
+procedure Test10();
+var
+  LJson: TEasyJson;
+begin
+  // Create an instance of TEasyJson
+  LJson := TEasyJson.Create();
+  try
+    // Set key-value pairs in the JSON object
+    LJson.&Set('name', 'Alice').&Set('age', 25);
+
+    // Print the formatted JSON output
+    WriteLn;
+    WriteLn('JSON Object:');
+    WriteLn(LJson.Format());
+    WriteLn;
+
+    // Save the JSON object to a file and check for success
+    if LJson.SaveToFile('data.json') then
+      WriteLn('JSON saved successfully to "data.json"')
+    else
+      WriteLn('Failed to save JSON to "data.json"');
+  finally
+    // Free the JSON object to prevent memory leaks
+    LJson.Free();
+  end;
+end;
+
+(*=============================================================================
+  Test11: Loading a JSON Object from a File
+  This procedure demonstrates how to load a JSON object from an external file
+  using the `LoadFromFile()` method in TEasyJson.
+
+  Steps performed:
+  - A TEasyJson instance is created.
+  - The JSON object is loaded from the file "data.json".
+  - If successful, the formatted JSON structure is printed.
+  - If loading fails, an error message is displayed.
+
+  Expected Output:
+  - If the file exists and is valid JSON, it prints the formatted JSON object.
+  - If loading fails, a failure message is displayed.
+
+  NOTE: Ensure that "data.json" exists in the same directory before running
+        this test. This example highlights how TEasyJson allows easy loading
+        of JSON data from an external file.
+==============================================================================*)
+procedure Test11();
+var
+  LJson: TEasyJson;
+begin
+  // Create an instance of TEasyJson
+  LJson := TEasyJson.Create();
+  try
+    // Attempt to load JSON data from file
+    if LJson.LoadFromFile('data.json') then
+    begin
+      // Print the formatted JSON object if successfully loaded
+      WriteLn;
+      WriteLn('JSON Object:');
+      WriteLn(LJson.Format());
+    end
+    else
+      // Print an error message if loading fails
+      WriteLn('Failed to load JSON file from "data.json"');
+  finally
+    // Free the JSON object to prevent memory leaks
+    LJson.Free();
+  end;
+end;
+
 (*=============================================================================
   RunTests: Execute Test Procedures
   This procedure runs one of the predefined test functions based on the value
@@ -503,6 +654,9 @@ end;
   06 - Test06: Working with JSON Arrays
   07 - Test07: Nesting JSON Objects
   08 - Test08: Nesting JSON Objects and Accessing Data
+  09 - Test09: Clearing a JSON Object
+  10 - Test10: Saving a JSON Object to a File
+  11 - Test11: Loading a JSON Object from a File
 
   NOTE: Modify the value of LNum to execute a different test case.
 ==============================================================================*)
@@ -527,6 +681,9 @@ begin
     06: Test06();  // Runs Test06
     07: Test07();  // Runs Test07
     08: Test08();  // Runs Test08
+    09: Test09();  // Runs Test09
+    10: Test10();  // Runs Test10
+    11: Test11();  // Runs Test11
   end;
 
   // Pause execution to allow the user to review output before termination

@@ -147,8 +147,8 @@ We welcome contributions to **EasyJson**! 🚀
 
 ## 📜 License
 
-**EasyJson** is distributed under the **BSD-3-Clause License**, allowing redistribution and modification in both source and binary forms.  
-See the [📜 LICENSE](https://github.com/tinyBigGAMES/EasyJson?tab=BSD-3-Clause-1-ov-file#BSD-3-Clause-1-ov-file) for details.
+**EasyJson** is distributed under the **BSD-3-Clause License**, allowing redistribution and modification in both source and binary forms. 
+See the [LICENSE](https://github.com/tinyBigGAMES/EasyJson?tab=BSD-3-Clause-1-ov-file#BSD-3-Clause-1-ov-file) for details.
 
 ## 💖 Support & Sponsorship
 
@@ -165,7 +165,7 @@ Your support keeps **EasyJson** evolving! If you find this library useful, pleas
   
 ---
 
-##### 🔥 EasyJson – Effortless JSON Handling for Delphi with Fluent Simplicity.
+🔥 *EasyJson – Effortless JSON Handling for Delphi with Fluent Simplicity.*
 
 <p align="center">
   <img src="media/delphi.png" alt="Delphi">

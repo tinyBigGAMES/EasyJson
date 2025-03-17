@@ -21,6 +21,7 @@ interface
 
 uses
   System.SysUtils,
+  System.IOUtils,
   System.Variants,
   System.JSON,
   System.Generics.Defaults,
@@ -99,13 +100,10 @@ type
     //function AsJSONValue(): TJSONValue;
     function GetValue(const AKeyOrIndex: Variant): TEasyJson;
     function CreateJsonValue(const AValue: Variant): TJSONValue;
-
-    // Helper to safely add a new pair to a JSON object
     procedure SafeAddPair(AObj: TJSONObject; const AName: string; AValue: TJSONValue);
-
-    // Helper to safely get/create a JSON array
     function GetOrCreateArray(AArray: TJSONArray; AIndex: Integer): TJSONArray;
     function AddChild(AChild: TEasyJson): TEasyJson;
+    procedure Clean();
   public
     /// <summary>
     ///   Initializes a new instance of the <c>TEasyJson</c> class as an empty JSON object.
@@ -264,6 +262,89 @@ type
     ///   </code>
     /// </example>
     destructor Destroy(); override;
+
+    /// <summary>
+    ///   Clears the JSON structure, resetting it to an empty state.
+    /// </summary>
+    /// <remarks>
+    ///   - If this instance represents a JSON object, all key-value pairs are removed.
+    ///   - If this instance represents a JSON array, all elements are removed.
+    ///   - The instance remains valid and can be reused to construct a new JSON structure.
+    /// </remarks>
+    /// <example>
+    ///   The following example demonstrates how <c>Clear</c> resets a JSON object:
+    ///   <code>
+    ///   var EJ: TEasyJson;
+    ///   begin
+    ///     EJ := TEasyJson.Create;
+    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     ShowMessage(EJ.Format); // Outputs JSON with data
+    ///
+    ///     EJ.Clear;
+    ///     ShowMessage(EJ.Format); // Outputs: {}
+    ///   end;
+    ///   </code>
+    /// </example>
+    procedure Clear;
+
+    /// <summary>
+    ///   Loads a JSON structure from a file.
+    /// </summary>
+    /// <param name="AFilename">
+    ///   The full path to the file containing the JSON data.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the JSON data was successfully loaded, <c>False</c> otherwise.
+    /// </returns>
+    /// <remarks>
+    ///   - The file must contain valid JSON; otherwise, the function returns <c>False</c>.
+    ///   - The existing content of the <c>TEasyJson</c> instance will be replaced with the loaded data.
+    ///   - If the file does not exist or cannot be read, the function returns <c>False</c>.
+    /// </remarks>
+    /// <example>
+    ///   The following example loads a JSON file:
+    ///   <code>
+    ///   var EJ: TEasyJson;
+    ///   begin
+    ///     EJ := TEasyJson.Create;
+    ///     if EJ.LoadFromFile('C:\data.json') then
+    ///       ShowMessage(EJ.Format)
+    ///     else
+    ///       ShowMessage('Failed to load JSON file');
+    ///   end;
+    ///   </code>
+    /// </example>
+    function LoadFromFile(const AFilename: string): Boolean;
+
+    /// <summary>
+    ///   Saves the JSON structure to a file.
+    /// </summary>
+    /// <param name="AFilename">
+    ///   The full path to the file where the JSON data will be saved.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the JSON data was successfully saved, <c>False</c> otherwise.
+    /// </returns>
+    /// <remarks>
+    ///   - If the file already exists, it will be overwritten.
+    ///   - If the JSON structure is empty, an empty JSON object <c>{}</c> will be written.
+    ///   - If there are any file write errors, the function returns <c>False</c>.
+    /// </remarks>
+    /// <example>
+    ///   The following example saves a JSON object to a file:
+    ///   <code>
+    ///   var EJ: TEasyJson;
+    ///   begin
+    ///     EJ := TEasyJson.Create;
+    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     if EJ.SaveToFile('C:\output.json') then
+    ///       ShowMessage('JSON saved successfully')
+    ///     else
+    ///       ShowMessage('Failed to save JSON file');
+    ///   end;
+    ///   </code>
+    /// </example>
+    function SaveToFile(const AFilename: string): Boolean;
 
     /// <summary>
     ///   Sets a key-value pair in the JSON object.
@@ -1094,6 +1175,26 @@ type
 implementation
 
 { TEasyJson }
+procedure TEasyJson.Clean();
+begin
+  // Free all child objects
+  if FChildren <> nil then
+  begin
+    FChildren.Free();
+    FChildren := nil;
+  end;
+
+  // Free the JSON value if we own it
+  if (FOwnership = ejOwned) and (FJsonValue <> nil) then
+  begin
+    FJsonValue.Free();
+    FJsonValue := nil;
+  end;
+
+  FParent := nil;
+  FOwnership := ejOwned;
+end;
+
 
 constructor TEasyJson.Create();
 begin
@@ -1144,22 +1245,76 @@ end;
 
 destructor TEasyJson.Destroy();
 begin
-  // Free all child objects
-  if FChildren <> nil then
-  begin
-    FChildren.Free();
-    FChildren := nil;
-  end;
-
-  // Free the JSON value if we own it
-  if (FOwnership = ejOwned) and (FJsonValue <> nil) then
-  begin
-    FJsonValue.Free();
-    FJsonValue := nil;
-  end;
+  Clean();
 
   inherited;
 end;
+
+function TEasyJson.LoadFromFile(const AFilename: string): Boolean;
+var
+  LFilename: string;
+  LText: string;
+  LJson: TJSONValue;
+begin
+  try
+    Result := False;
+
+    if AFilename.IsEmpty then Exit;
+
+    LFilename := TPath.ChangeExtension(AFilename, 'json');
+    if not TFile.Exists(LFilename) then Exit;
+
+    LText := TFile.ReadAllText(LFilename, TEncoding.UTF8);
+    if LText.IsEmpty then Exit;
+
+    LJson := TJSONObject.ParseJSONValue(LText);
+    if not Assigned(LJson) then Exit;
+
+    Clean();
+
+    FJsonValue := LJson;
+
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      Result := False;
+    end;
+  end;
+end;
+
+function TEasyJson.SaveToFile(const AFilename: string): Boolean;
+var
+  LFilename: string;
+  LText: string;
+begin
+  try
+    Result := False;
+    if AFilename.IsEmpty then Exit;
+
+    LFilename := TPath.ChangeExtension(AFilename, 'json');
+
+    LText := Format(2);
+
+    TFile.WriteAllText(LFilename, LText, TEncoding.UTF8);
+
+    Result := TFile.Exists(LFilename);
+  except
+    on E: Exception do
+    begin
+      Result := False;
+    end;
+  end;
+
+end;
+
+procedure TEasyJson.Clear();
+begin
+  Clean();
+
+  FJsonValue := TJSONObject.Create();
+end;
+
 
 function TEasyJson.AsObject: TJSONObject;
 begin
