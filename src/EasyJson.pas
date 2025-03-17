@@ -92,6 +92,7 @@ type
     FJsonValue: TJSONValue;
     FParent: TEasyJson;
     FOwnership: TejValueOwnership;
+    FChildren: TObjectList<TEasyJson>;
 
     function AsObject(): TJSONObject;
     function AsArray(): TJSONArray;
@@ -104,6 +105,7 @@ type
 
     // Helper to safely get/create a JSON array
     function GetOrCreateArray(AArray: TJSONArray; AIndex: Integer): TJSONArray;
+    function AddChild(AChild: TEasyJson): TEasyJson;
   public
     /// <summary>
     ///   Initializes a new instance of the <c>TEasyJson</c> class as an empty JSON object.
@@ -1100,6 +1102,7 @@ begin
   FJsonValue := TJSONObject.Create();
   FParent := nil;
   FOwnership := ejOwned;
+  FChildren := nil;
 end;
 
 constructor TEasyJson.Create(const AJson: string);
@@ -1116,6 +1119,7 @@ begin
 
   FParent := nil;
   FOwnership := ejOwned;
+  FChildren := nil;
 end;
 
 constructor TEasyJson.Create(const AJsonValue: TJSONValue; AOwnership: TejValueOwnership);
@@ -1125,6 +1129,7 @@ begin
   FJsonValue := AJsonValue;
   FParent := nil;
   FOwnership := AOwnership;
+  FChildren := nil
 end;
 
 constructor TEasyJson.Create(const AJsonValue: TJSONValue; AParent: TEasyJson; AOwnership: TejValueOwnership);
@@ -1134,12 +1139,24 @@ begin
   FJsonValue := AJsonValue;
   FParent := AParent;
   FOwnership := AOwnership;
+  FChildren := nil
 end;
 
 destructor TEasyJson.Destroy();
 begin
+  // Free all child objects
+  if FChildren <> nil then
+  begin
+    FChildren.Free();
+    FChildren := nil;
+  end;
+
+  // Free the JSON value if we own it
   if (FOwnership = ejOwned) and (FJsonValue <> nil) then
-    FJsonValue.Free;
+  begin
+    FJsonValue.Free();
+    FJsonValue := nil;
+  end;
 
   inherited;
 end;
@@ -1172,29 +1189,43 @@ var
   LObj: TJSONObject;
   LArray: TJSONArray;
   LValue: TJSONValue;
+  LResult: TEasyJson;
 begin
   if VarIsStr(AKeyOrIndex) then
   begin
     // Access by string key
     LObj := AsObject;
     if (LObj <> nil) and LObj.TryGetValue<TJSONValue>(string(AKeyOrIndex), LValue) then
-      Result := TEasyJson.Create(LValue, Self, ejReference)
+    begin
+      LResult := TEasyJson.Create(LValue, Self, ejReference);
+      Result := AddChild(LResult);
+    end
     else
-      Result := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+    begin
+      LResult := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+      Result := AddChild(LResult);
+    end;
   end
   else if VarType(AKeyOrIndex) in [varSmallint, varInteger, varByte, varWord, varLongWord, varInt64] then
   begin
     // Access by numeric index
     LArray := AsArray;
     if (LArray <> nil) and (Integer(AKeyOrIndex) >= 0) and (Integer(AKeyOrIndex) < LArray.Count) then
-      Result := TEasyJson.Create(LArray.Items[Integer(AKeyOrIndex)], Self, ejReference)
+    begin
+      LResult := TEasyJson.Create(LArray.Items[Integer(AKeyOrIndex)], Self, ejReference);
+      Result := AddChild(LResult);
+    end
     else
-      Result := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+    begin
+      LResult := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+      Result := AddChild(LResult);
+    end;
   end
   else
   begin
     // Invalid index type
-    Result := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+    LResult := TEasyJson.Create(TJSONNull.Create, Self, ejOwned);
+    Result := AddChild(LResult);
   end;
 end;
 
@@ -1209,9 +1240,9 @@ begin
   else if VarType(AValue) = varBoolean then
   begin
     if Boolean(AValue) then
-      Result := TJSONTrue.Create
+      Result := TJSONTrue.Create()
     else
-      Result := TJSONFalse.Create;
+      Result := TJSONFalse.Create();
   end
   else
     Result := TJSONString.Create(VarToStr(AValue));
@@ -1258,12 +1289,27 @@ begin
   end;
 end;
 
+function TEasyJson.AddChild(AChild: TEasyJson): TEasyJson;
+begin
+  if AChild <> nil then
+  begin
+    // Initialize the children list if needed
+    if FChildren = nil then
+      FChildren := TObjectList<TEasyJson>.Create(True);
+
+    // Add the child to our tracking list
+    FChildren.Add(AChild);
+  end;
+
+  Result := AChild;
+end;
+
 function TEasyJson.&Set(const AKey: string; const AValue: Variant): TEasyJson;
 var
   LObj: TJSONObject;
   LValue: TJSONValue;
 begin
-  LObj := AsObject;
+  LObj := AsObject();
   if LObj <> nil then
   begin
     LValue := CreateJsonValue(AValue);
@@ -1287,7 +1333,7 @@ var
   LObj: TJSONObject;
   LClone: TJSONValue;
 begin
-  LObj := AsObject;
+  LObj := AsObject();
   if (LObj <> nil) and (AJSONValue <> nil) then
   begin
     LClone := AJSONValue.Clone as TJSONValue;
@@ -1301,7 +1347,7 @@ var
   LArray: TJSONArray;
   LValue: TJSONValue;
 begin
-  LArray := AsArray;
+  LArray := AsArray();
   if LArray <> nil then
   begin
     // Ensure array has enough elements
@@ -1341,7 +1387,7 @@ var
   LNewArray: TJSONArray;
   I: Integer;
 begin
-  LArray := AsArray;
+  LArray := AsArray();
   if (LArray <> nil) and (AJSONValue <> nil) then
   begin
     // Ensure array has enough elements
@@ -1451,6 +1497,7 @@ function TEasyJson.AddObject(): TEasyJson;
 var
   LObj: TJSONObject;
   LArray: TJSONArray;
+  LResult: TEasyJson;
 begin
   LObj := TJSONObject.Create();
 
@@ -1462,12 +1509,15 @@ begin
   else if FJsonValue is TJSONArray then
   begin
     LArray := AsArray;
-    LArray.Add(LObj);
-    Result := TEasyJson.Create(LObj, Self, ejReference);
+    LArray.AddElement(LObj);
+
+    // Create a new TEasyJson for the child and track it
+    LResult := TEasyJson.Create(LObj, Self, ejReference);
+    Result := AddChild(LResult);
   end
   else
   begin
-    LObj.Free();
+    LObj.Free;
     Result := Self;
   end;
 end;
@@ -1476,13 +1526,17 @@ function TEasyJson.AddObject(const AKey: string): TEasyJson;
 var
   LObj: TJSONObject;
   LParentObj: TJSONObject;
+  LResult: TEasyJson;
 begin
   LParentObj := AsObject();
   if LParentObj <> nil then
   begin
-    LObj := TJSONObject.Create();
+    LObj := TJSONObject.Create;
     LParentObj.AddPair(AKey, LObj);
-    Result := TEasyJson.Create(LObj, Self, ejReference);
+
+    // Create a new TEasyJson for the child and track it
+    LResult := TEasyJson.Create(LObj, Self, ejReference);
+    Result := AddChild(LResult);
   end
   else
     Result := Self;
@@ -1498,18 +1552,22 @@ begin
   if LParentObj <> nil then
   begin
     LObj := TJSONObject.Create();
-    LChildJson := TEasyJson.Create(LObj, Self, ejOwned);
+
+    // Create a child TEasyJson that we own
+    LChildJson := TEasyJson.Create(LObj, ejOwned);
 
     // Call the function to populate the object
     if Assigned(AFunc) then
       AFunc(LChildJson);
 
+    // Transfer ownership of the JSON value to the parent
+    LChildJson.FOwnership := ejReference;
+
     // Add the object to the parent
     LParentObj.AddPair(AKey, LObj);
 
-    // Free the wrapper but not the JSON object
-    LChildJson.FOwnership := ejReference;
-    LChildJson.Free();
+    // Free the child wrapper but not the JSON object
+    LChildJson.Free;
   end;
 
   Result := Self;
@@ -1522,7 +1580,9 @@ var
   LChildJson: TEasyJson;
 begin
   LObj := TJSONObject.Create();
-  LChildJson := TEasyJson.Create(LObj, Self, ejOwned);
+
+  // Create a child TEasyJson that we own
+  LChildJson := TEasyJson.Create(LObj, ejOwned);
 
   // Call the function to populate the object
   if Assigned(AFunc) then
@@ -1531,12 +1591,14 @@ begin
   if FJsonValue is TJSONArray then
   begin
     // Add to array
-    LArray := AsArray();
-    LArray.Add(LObj);
+    LArray := AsArray;
+    LArray.AddElement(LObj);
+
+    // Transfer ownership
+    LChildJson.FOwnership := ejReference;
 
     // Free the wrapper but not the JSON object
-    LChildJson.FOwnership := ejReference;
-    LChildJson.Free();
+    LChildJson.Free;
 
     Result := Self;
   end
@@ -1545,26 +1607,29 @@ begin
     // This is the root
     FJsonValue := LObj;
 
-    // Free the wrapper but not the JSON object
+    // Transfer ownership
     LChildJson.FOwnership := ejReference;
-    LChildJson.Free();
+
+    // Free the wrapper but not the JSON object
+    LChildJson.Free;
 
     Result := Self;
   end
   else
   begin
     // Invalid case
-    LChildJson.Free();
+    LChildJson.Free;
     Result := Self;
   end;
 end;
 
-function TEasyJson.AddArray(): TEasyJson;
+function TEasyJson.AddArray: TEasyJson;
 var
   LArray: TJSONArray;
   LParentArray: TJSONArray;
+  LResult: TEasyJson;
 begin
-  LArray := TJSONArray.Create();
+  LArray := TJSONArray.Create;
 
   if FJsonValue = nil then
   begin
@@ -1574,12 +1639,15 @@ begin
   else if FJsonValue is TJSONArray then
   begin
     LParentArray := AsArray();
-    LParentArray.Add(LArray);
-    Result := TEasyJson.Create(LArray, Self, ejReference);
+    LParentArray.AddElement(LArray);
+
+    // Create a new TEasyJson for the child array and track it
+    LResult := TEasyJson.Create(LArray, Self, ejReference);
+    Result := AddChild(LResult);
   end
   else
   begin
-    LArray.Free();
+    LArray.Free;
     Result := Self;
   end;
 end;
@@ -1588,13 +1656,17 @@ function TEasyJson.AddArray(const AKey: string): TEasyJson;
 var
   LArray: TJSONArray;
   LParentObj: TJSONObject;
+  LResult: TEasyJson;
 begin
   LParentObj := AsObject();
   if LParentObj <> nil then
   begin
     LArray := TJSONArray.Create;
     LParentObj.AddPair(AKey, LArray);
-    Result := TEasyJson.Create(LArray, Self, ejReference);
+
+    // Create a new TEasyJson for the child array and track it
+    LResult := TEasyJson.Create(LArray, Self, ejReference);
+    Result := AddChild(LResult);
   end
   else
     Result := Self;

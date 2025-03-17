@@ -1,8 +1,8 @@
 ﻿[ClosedView_QzpcRGV2XERlbHBoaVxQcm9qZWN0c1xFYXN5SnNvblxyZXBvXHNyY1xFYXN5SnNvbi5wYXM=]
 Module=C:\Dev\Delphi\Projects\EasyJson\repo\src\EasyJson.pas
-CursorX=7
-CursorY=98
-TopLine=1
+CursorX=27
+CursorY=1661
+TopLine=1741
 LeftCol=1
 Elisions=
 Bookmarks=
@@ -387,4 +387,14 @@ LeftCol=1
 Elisions=
 Bookmarks=
 EditViewName=C:\Dev\Delphi\Projects\EasyJson\repo\examples\testbed\Testbed.dpr
+[ClosedView_QzpcRGV2XERlbHBoaVxQcm9qZWN0c1xFYXN5SnNvblxyZXBvXGV4YW1wbGVzXHRlc3RiZWRcVVRl
+c3RiZWQucGFz]
+Module=C:\Dev\Delphi\Projects\EasyJson\repo\examples\testbed\UTestbed.pas
+CursorX=6
+CursorY=501
+TopLine=481
+LeftCol=1
+Elisions=
+Bookmarks=
+EditViewName=C:\Dev\Delphi\Projects\EasyJson\repo\examples\testbed\UTestbed.pas
 
