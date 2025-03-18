@@ -673,14 +673,14 @@ end;
 ==============================================================================*)
 procedure Test12;
 var
-  Json: TEasyJson;
-  Text, PreText: string;
+  LJson: TEasyJson;
+  LText, LPreText: string;
 begin
   // Create a nested JSON structure with arrays and objects
-  Json := TEasyJson.Create;
+  LJson := TEasyJson.Create();
   try
     // Build a complex nested structure similar to an API response
-    Json.AddArray('candidates')
+    LJson.AddArray('candidates')
       .AddObject
         .&Set('index', 0)
         .&Set('finishReason', 'STOP')
@@ -696,15 +696,15 @@ begin
 
     // Print the original JSON structure
     WriteLn('Original JSON:');
-    WriteLn(Json.Format);
+    WriteLn(LJson.Format());
     WriteLn;
 
     // Example 1: Using HasPath and traditional bracket notation
     WriteLn('Example 1: Using HasPath and bracket notation');
-    if Json.HasPath('candidates[0].content.parts[0].text') then
+    if LJson.HasPath('candidates[0].content.parts[0].text') then
     begin
-      Text := Json['candidates'][0]['content']['parts'][0]['text'].AsString;
-      WriteLn('Text found: ' + Text);
+      LText := LJson['candidates'][0]['content']['parts'][0]['text'].AsString();
+      WriteLn('Text found: ' + LText);
     end
     else
       WriteLn('Path not found');
@@ -712,10 +712,10 @@ begin
 
     // Example 2: Using HasPath and Path property
     WriteLn('Example 2: Using HasPath and Path property');
-    if Json.HasPath('candidates[0].content.parts[0].text') then
+    if LJson.HasPath('candidates[0].content.parts[0].text') then
     begin
-      Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
-      WriteLn('Text found: ' + Text);
+      LText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
+      WriteLn('Text found: ' + LText);
     end
     else
       WriteLn('Path not found');
@@ -723,7 +723,7 @@ begin
 
     // Example 3: Checking a path that doesn't exist
     WriteLn('Example 3: Checking a path that doesn''t exist');
-    if Json.HasPath('candidates[1].content') then
+    if LJson.HasPath('candidates[1].content') then
       WriteLn('Path exists (should not happen)')
     else
       WriteLn('Path not found (expected)');
@@ -731,37 +731,37 @@ begin
 
     // Example 4: Accessing a non-existent path returns a null value
     WriteLn('Example 4: Accessing a non-existent path');
-    Text := Json.Path['candidates[1].content.parts[0].text'].AsString;
-    WriteLn('Result of non-existent path: "' + Text + '"');
+    LText := LJson.Path['candidates[1].content.parts[0].text'].AsString();
+    WriteLn('Result of non-existent path: "' + LText + '"');
     WriteLn;
 
     // Example 5: Modifying a nested value using Path and Set
     WriteLn('Example 5: Modifying a nested value using Path and Set');
-    PreText := Json.Path['candidates[0].content.parts[0].text'].AsString;
-    WriteLn('Before update: ' + PreText);
+    LPreText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
+    WriteLn('Before update: ' + LPreText);
 
-    Json.Path['candidates[0].content.parts[0]'].&Set('text', 'Updated with Path+Set');
+    LJson.Path['candidates[0].content.parts[0]'].&Set('text', 'Updated with Path+Set');
 
     // Verify the update worked
-    Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
-    WriteLn('After update: ' + Text);
+    LText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
+    WriteLn('After update: ' + LText);
     WriteLn;
 
     // Example 6: Modifying a nested value using bracket notation
     WriteLn('Example 6: Modifying a nested value using bracket notation');
-    Json['candidates'][0]['content']['parts'][0].&Set('text', 'Updated with brackets');
-    Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
-    WriteLn('Updated text: ' + Text);
+    LJson['candidates'][0]['content']['parts'][0].&Set('text', 'Updated with brackets');
+    LText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
+    WriteLn('Updated text: ' + LText);
     WriteLn;
 
     // Example 7: Adding a new property to a nested object using Path
     WriteLn('Example 7: Adding a new property using Path and Set');
-    Json.Path['candidates[0].content'].&Set('newProperty', 'New value via Path+Set');
+    LJson.Path['candidates[0].content'].&Set('newProperty', 'New value via Path+Set');
 
-    if Json.HasPath('candidates[0].content.newProperty') then
+    if LJson.HasPath('candidates[0].content.newProperty') then
     begin
-      Text := Json.Path['candidates[0].content.newProperty'].AsString;
-      WriteLn('New property value: ' + Text);
+      LText := LJson.Path['candidates[0].content.newProperty'].AsString();
+      WriteLn('New property value: ' + LText);
     end
     else
       WriteLn('Failed to add new property');
@@ -769,12 +769,12 @@ begin
 
     // Example 8: Complex modification - adding a new object in an array using Path
     WriteLn('Example 8: Adding a new object to parts array using Path');
-    Json.Path['candidates[0].content.parts'].AddObject.&Set('text', 'Second part text');
+    LJson.Path['candidates[0].content.parts'].AddObject.&Set('text', 'Second part text');
 
-    if Json.HasPath('candidates[0].content.parts[1].text') then
+    if LJson.HasPath('candidates[0].content.parts[1].text') then
     begin
-      Text := Json.Path['candidates[0].content.parts[1].text'].AsString;
-      WriteLn('New array item text: ' + Text);
+      LText := LJson.Path['candidates[0].content.parts[1].text'].AsString();
+      WriteLn('New array item text: ' + LText);
     end
     else
       WriteLn('Failed to add new array item');
@@ -782,11 +782,11 @@ begin
 
     // Print the final JSON after modifications
     WriteLn('Final JSON:');
-    WriteLn(Json.Format);
+    WriteLn(LJson.Format());
 
   finally
     // Free the JSON object to prevent memory leaks
-    Json.Free;
+    LJson.Free();
   end;
 end;
 
