@@ -94,16 +94,22 @@ type
     FParent: TEasyJson;
     FOwnership: TejValueOwnership;
     FChildren: TObjectList<TEasyJson>;
+    FOriginalKey: string;
+    FOriginalParent: TEasyJson;
+    FIsDirectReference: Boolean;
 
-    function AsObject(): TJSONObject;
-    function AsArray(): TJSONArray;
+    function  AsObject(): TJSONObject;
+    function  AsArray(): TJSONArray;
     //function AsJSONValue(): TJSONValue;
-    function GetValue(const AKeyOrIndex: Variant): TEasyJson;
-    function CreateJsonValue(const AValue: Variant): TJSONValue;
+    function  GetValue(const AKeyOrIndex: Variant): TEasyJson;
+    function  CreateJsonValue(const AValue: Variant): TJSONValue;
     procedure SafeAddPair(AObj: TJSONObject; const AName: string; AValue: TJSONValue);
-    function GetOrCreateArray(AArray: TJSONArray; AIndex: Integer): TJSONArray;
-    function AddChild(AChild: TEasyJson): TEasyJson;
+    function  GetOrCreateArray(AArray: TJSONArray; AIndex: Integer): TJSONArray;
+    function  AddChild(AChild: TEasyJson): TEasyJson;
+    function  GetValueByPath(const APath: string): TEasyJson;
+    procedure SetValueByPath(const APath: string; const AJson: TEasyJson);
     procedure Clean();
+
   public
     /// <summary>
     ///   Initializes a new instance of the <c>TEasyJson</c> class as an empty JSON object.
@@ -345,6 +351,44 @@ type
     ///   </code>
     /// </example>
     function SaveToFile(const AFilename: string): Boolean;
+
+    /// <summary>
+    ///   Checks if a JSON path exists within the JSON structure.
+    /// </summary>
+    /// <param name="APath">
+    ///   A dot-separated path specifying the location of the JSON element to check.
+    ///   Array indices should be enclosed in square brackets (e.g., <c>'candidates[0].content.newProperty'</c>).
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the specified path exists in the JSON structure, otherwise <c>False</c>.
+    /// </returns>
+    /// <remarks>
+    ///   - The path can traverse both JSON objects and arrays.
+    ///   - Array indices should be specified using square brackets (e.g., <c>'items[2].name'</c>).
+    ///   - If any part of the path does not exist, the function returns <c>False</c>.
+    ///   - This method does not modify the JSON structure.
+    /// </remarks>
+    /// <example>
+    ///   The following example demonstrates checking for the existence of a JSON path:
+    ///   <code>
+    ///   var EJ: TEasyJson;
+    ///   begin
+    ///     EJ := TEasyJson.Create;
+    ///     EJ.AddObject('candidates')
+    ///       .AddArray.Set(0, TEasyJson.Create.Set('content', TEasyJson.Create.Set('newProperty', 'value')));
+    ///
+    ///     if EJ.HasPath('candidates[0].content.newProperty') then
+    ///       ShowMessage('Property exists')
+    ///     else
+    ///       ShowMessage('Property does not exist');
+    ///   end;
+    ///   </code>
+    ///   Expected Output:
+    ///   <code>
+    ///   Property exists
+    ///   </code>
+    /// </example>
+    function HasPath(const APath: string): Boolean;
 
     /// <summary>
     ///   Sets a key-value pair in the JSON object.
@@ -1170,7 +1214,43 @@ type
     /// </example>
     property Items[const AKeyOrIndex: Variant]: TEasyJson read GetValue; default;
 
-    end;
+    /// <summary>
+    ///   Provides direct access to JSON elements using a dot-separated path.
+    /// </summary>
+    /// <param name="APath">
+    ///   A dot-separated string specifying the location of the JSON element.
+    ///   Array indices should be enclosed in square brackets (e.g., <c>'candidates[0].content.newProperty'</c>).
+    /// </param>
+    /// <returns>
+    ///   A <c>TEasyJson</c> instance representing the specified JSON element.
+    /// </returns>
+    /// <remarks>
+    ///   - The path can traverse both JSON objects and arrays.
+    ///   - Array indices should be specified using square brackets (e.g., <c>'items[2].name'</c>).
+    ///   - If any part of the path does not exist, behavior depends on implementation
+    ///     (it may return an empty instance or create missing objects dynamically).
+    ///   - This property allows both reading and writing JSON elements dynamically.
+    /// </remarks>
+    /// <example>
+    ///   The following example demonstrates how to access and modify JSON values using the <c>Path</c> property:
+    ///   <code>
+    ///   var EJ: TEasyJson;
+    ///   begin
+    ///     EJ := TEasyJson.Create;
+    ///     EJ.Path['candidates[0].content.newProperty'] := TEasyJson.Create.Set('value', 123);
+    ///
+    ///     if EJ.HasPath('candidates[0].content.newProperty') then
+    ///       ShowMessage(EJ.Path['candidates[0].content.newProperty']['value'].AsString);
+    ///   end;
+    ///   </code>
+    ///   Expected Output:
+    ///   <code>
+    ///   123
+    ///   </code>
+    /// </example>
+    property Path[const APath: string]: TEasyJson read GetValueByPath write SetValueByPath;
+
+  end;
 
 implementation
 
@@ -1195,6 +1275,156 @@ begin
   FOwnership := ejOwned;
 end;
 
+function TEasyJson.GetValueByPath(const APath: string): TEasyJson;
+var
+  PathParts: TArray<string>;
+  Current: TEasyJson;
+  Part: string;
+  ArrayIndex: Integer;
+  ArrayPart: string;
+  OpenBracket, CloseBracket: Integer;
+  IsArrayAccess: Boolean;
+  Child: TEasyJson;
+begin
+  if Trim(APath) = '' then
+    Exit(Self);
+
+  PathParts := APath.Split(['.']);
+  Current := Self;
+
+  for Part in PathParts do
+  begin
+    if Part = '' then
+      Continue;
+
+    // Check if this part contains array access [n]
+    OpenBracket := Pos('[', Part);
+    CloseBracket := Pos(']', Part);
+    IsArrayAccess := (OpenBracket > 0) and (CloseBracket > OpenBracket);
+
+    if IsArrayAccess then
+    begin
+      // Extract the object part and array index
+      ArrayPart := Copy(Part, 1, OpenBracket - 1);
+      if not TryStrToInt(Copy(Part, OpenBracket + 1, CloseBracket - OpenBracket - 1), ArrayIndex) then
+      begin
+        // Invalid array index, return null
+        Result := TEasyJson.Create(TJSONNull.Create, Current, ejOwned);
+        Result.FOriginalParent := Self;
+        Result.FOriginalKey := APath;
+        Exit(AddChild(Result));
+      end;
+
+      // If we have an object part, navigate to it first
+      if ArrayPart <> '' then
+      begin
+        if (Current.FJsonValue is TJSONObject) and
+           (TJSONObject(Current.FJsonValue).GetValue(ArrayPart) <> nil) then
+        begin
+          Current := Current[ArrayPart];
+        end
+        else
+        begin
+          // Object part doesn't exist, return null
+          Result := TEasyJson.Create(TJSONNull.Create, Current, ejOwned);
+          Result.FOriginalParent := Self;
+          Result.FOriginalKey := APath;
+          Exit(AddChild(Result));
+        end;
+      end;
+
+      // Now access the array index
+      if (Current.FJsonValue is TJSONArray) and
+         (ArrayIndex >= 0) and
+         (ArrayIndex < TJSONArray(Current.FJsonValue).Count) then
+      begin
+        Current := Current[ArrayIndex];
+      end
+      else
+      begin
+        // Array index out of bounds, return null
+        Result := TEasyJson.Create(TJSONNull.Create, Current, ejOwned);
+        Result.FOriginalParent := Self;
+        Result.FOriginalKey := APath;
+        Exit(AddChild(Result));
+      end;
+    end
+    else
+    begin
+      // Simple object property access
+      if (Current.FJsonValue is TJSONObject) and
+         (TJSONObject(Current.FJsonValue).GetValue(Part) <> nil) then
+      begin
+        Child := TEasyJson.Create(TJSONObject(Current.FJsonValue).GetValue(Part), Current, ejReference);
+        Child.FOriginalParent := Current;
+        Child.FOriginalKey := Part;
+        Current := AddChild(Child);
+      end
+      else
+      begin
+        // Property doesn't exist, return null
+        Result := TEasyJson.Create(TJSONNull.Create, Current, ejOwned);
+        Result.FOriginalParent := Self;
+        Result.FOriginalKey := APath;
+        Exit(AddChild(Result));
+      end;
+    end;
+  end;
+
+  // Set up the direct reference flag
+  Current.FIsDirectReference := True;
+
+  // Return the final node
+  Result := Current;
+end;
+
+procedure TEasyJson.SetValueByPath(const APath: string; const AJson: TEasyJson);
+var
+  ParentPath: string;
+  LastDot, LastBracketOpen, LastBracketClose: Integer;
+  Key: string;
+  Index: Integer;
+  Parent: TEasyJson;
+begin
+  // Find the last segment of the path
+  LastDot := LastDelimiter('.', APath);
+  LastBracketOpen := LastDelimiter('[', APath);
+  LastBracketClose := LastDelimiter(']', APath);
+
+  if (LastBracketOpen > LastDot) and (LastBracketClose > LastBracketOpen) then
+  begin
+    // Last segment is an array index
+    ParentPath := Copy(APath, 1, LastBracketOpen - 1);
+    if not TryStrToInt(Copy(APath, LastBracketOpen + 1, LastBracketClose - LastBracketOpen - 1), Index) then
+      Exit; // Invalid index
+
+    if HasPath(ParentPath) then
+    begin
+      Parent := GetValueByPath(ParentPath);
+      if Parent.FJsonValue is TJSONArray then
+        Parent.&Set(Index, AJson);
+    end;
+  end
+  else if LastDot > 0 then
+  begin
+    // Last segment is an object property
+    ParentPath := Copy(APath, 1, LastDot - 1);
+    Key := Copy(APath, LastDot + 1, Length(APath));
+
+    if HasPath(ParentPath) then
+    begin
+      Parent := GetValueByPath(ParentPath);
+      if Parent.FJsonValue is TJSONObject then
+        Parent.&Set(Key, AJson);
+    end;
+  end
+  else
+  begin
+    // Path is just a direct property
+    if FJsonValue is TJSONObject then
+      &Set(APath, AJson);
+  end;
+end;
 
 constructor TEasyJson.Create();
 begin
@@ -1204,6 +1434,9 @@ begin
   FParent := nil;
   FOwnership := ejOwned;
   FChildren := nil;
+  FOriginalKey := '';
+  FOriginalParent := nil;
+  FIsDirectReference := False;
 end;
 
 constructor TEasyJson.Create(const AJson: string);
@@ -1221,6 +1454,9 @@ begin
   FParent := nil;
   FOwnership := ejOwned;
   FChildren := nil;
+  FOriginalParent := nil;
+  FOriginalKey := '';
+  FIsDirectReference := False;
 end;
 
 constructor TEasyJson.Create(const AJsonValue: TJSONValue; AOwnership: TejValueOwnership);
@@ -1230,7 +1466,10 @@ begin
   FJsonValue := AJsonValue;
   FParent := nil;
   FOwnership := AOwnership;
-  FChildren := nil
+  FChildren := nil;
+  FOriginalParent := nil;
+  FOriginalKey := '';
+  FIsDirectReference := False;
 end;
 
 constructor TEasyJson.Create(const AJsonValue: TJSONValue; AParent: TEasyJson; AOwnership: TejValueOwnership);
@@ -1240,7 +1479,10 @@ begin
   FJsonValue := AJsonValue;
   FParent := AParent;
   FOwnership := AOwnership;
-  FChildren := nil
+  FChildren := nil;
+  FOriginalParent := nil;
+  FOriginalKey := '';
+  FIsDirectReference := False;
 end;
 
 destructor TEasyJson.Destroy();
@@ -1308,6 +1550,78 @@ begin
 
 end;
 
+function TEasyJson.HasPath(const APath: string): Boolean;
+var
+  PathParts: TArray<string>;
+  Current: TEasyJson;
+  Part: string;
+  ArrayIndex: Integer;
+  ArrayPart: string;
+  OpenBracket, CloseBracket: Integer;
+  IsArrayAccess: Boolean;
+begin
+  if Trim(APath) = '' then
+    Exit(True);
+
+  PathParts := APath.Split(['.']);
+  Current := Self;
+
+  for Part in PathParts do
+  begin
+    if Part = '' then
+      Continue;
+
+    // Check if this part contains array access [n]
+    OpenBracket := Pos('[', Part);
+    CloseBracket := Pos(']', Part);
+    IsArrayAccess := (OpenBracket > 0) and (CloseBracket > OpenBracket);
+
+    if IsArrayAccess then
+    begin
+      // Extract the object part and array index
+      ArrayPart := Copy(Part, 1, OpenBracket - 1);
+      if not TryStrToInt(Copy(Part, OpenBracket + 1, CloseBracket - OpenBracket - 1), ArrayIndex) then
+        Exit(False); // Invalid array index
+
+      // If we have an object part, navigate to it first
+      if ArrayPart <> '' then
+      begin
+        if (Current.FJsonValue is TJSONObject) and
+           (TJSONObject(Current.FJsonValue).GetValue(ArrayPart) <> nil) then
+        begin
+          Current := Current[ArrayPart];
+        end
+        else
+          Exit(False); // Object part doesn't exist
+      end;
+
+      // Now check the array index
+      if (Current.FJsonValue is TJSONArray) and
+         (ArrayIndex >= 0) and
+         (ArrayIndex < TJSONArray(Current.FJsonValue).Count) then
+      begin
+        Current := Current[ArrayIndex];
+      end
+      else
+        Exit(False); // Array index out of bounds
+    end
+    else
+    begin
+      // Simple object property access
+      if (Current.FJsonValue is TJSONObject) and
+         (TJSONObject(Current.FJsonValue).GetValue(Part) <> nil) then
+      begin
+        Current := Current[Part];
+      end
+      else
+        Exit(False); // Property doesn't exist
+    end;
+  end;
+
+  // If we got here, the path exists
+  Result := True;
+end;
+
 procedure TEasyJson.Clear();
 begin
   Clean();
@@ -1353,6 +1667,11 @@ begin
     if (LObj <> nil) and LObj.TryGetValue<TJSONValue>(string(AKeyOrIndex), LValue) then
     begin
       LResult := TEasyJson.Create(LValue, Self, ejReference);
+      // Set original parent and key for tracking
+      LResult.FOriginalParent := Self;
+      LResult.FOriginalKey := string(AKeyOrIndex);
+      // Set direct reference flag
+      LResult.FIsDirectReference := True;
       Result := AddChild(LResult);
     end
     else
@@ -1368,6 +1687,11 @@ begin
     if (LArray <> nil) and (Integer(AKeyOrIndex) >= 0) and (Integer(AKeyOrIndex) < LArray.Count) then
     begin
       LResult := TEasyJson.Create(LArray.Items[Integer(AKeyOrIndex)], Self, ejReference);
+      // Set original parent and key for tracking
+      LResult.FOriginalParent := Self;
+      LResult.FOriginalKey := IntToStr(Integer(AKeyOrIndex));
+      // Set direct reference flag
+      LResult.FIsDirectReference := True;
       Result := AddChild(LResult);
     end
     else
@@ -1461,48 +1785,189 @@ end;
 
 function TEasyJson.&Set(const AKey: string; const AValue: Variant): TEasyJson;
 var
-  LObj: TJSONObject;
+  LObj, ParentObj: TJSONObject;
+  ParentArray: TJSONArray;
   LValue: TJSONValue;
+  ArrIndex: Integer;
 begin
-  LObj := AsObject();
+  LObj := AsObject;
   if LObj <> nil then
   begin
     LValue := CreateJsonValue(AValue);
     SafeAddPair(LObj, AKey, LValue);
+
+    // If this is a direct reference, no need to update the original parent
+    // as we're directly modifying the object in the parent structure
+    if not FIsDirectReference then
+    begin
+      // Update original parent if this is a reference
+      if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+      begin
+        if FOriginalParent.FJsonValue is TJSONObject then
+        begin
+          ParentObj := FOriginalParent.AsObject;
+          if ParentObj <> nil then
+          begin
+            // Replace the value in the parent - this is safer but may be unnecessary for direct references
+            if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+            begin
+              // Only replace if the reference has changed
+              ParentObj.RemovePair(FOriginalKey).Free;
+              ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+            end;
+          end;
+        end
+        else if FOriginalParent.FJsonValue is TJSONArray then
+        begin
+          ParentArray := FOriginalParent.AsArray;
+          if ParentArray <> nil then
+          begin
+            if TryStrToInt(FOriginalKey, ArrIndex) then
+            begin
+              // Replace the value in the parent array
+              if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+              begin
+                // Check if we need to replace it
+                if ParentArray.Items[ArrIndex] <> FJsonValue then
+                begin
+                  ParentArray.Items[ArrIndex].Free;
+                  ParentArray.Remove(ArrIndex);
+                  ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
   end;
   Result := Self;
 end;
 
 function TEasyJson.&Set(const AKey: string; const AJson: TEasyJson): TEasyJson;
+var
+  LObj, ParentObj: TJSONObject;
+  ParentArray: TJSONArray;
+  LClone: TJSONValue;
+  ArrIndex: Integer;
 begin
-  if (AJson <> nil) and (AJson.FJsonValue <> nil) then
-    &Set(AKey, AJson.FJsonValue.Clone as TJSONValue)
-  else
-    &Set(AKey, TJSONNull.Create);
+  LObj := AsObject;
+  if (LObj <> nil) and (AJson <> nil) and (AJson.FJsonValue <> nil) then
+  begin
+    LClone := AJson.FJsonValue.Clone as TJSONValue;
+    SafeAddPair(LObj, AKey, LClone);
 
+    // If this is a direct reference, no need to update the original parent
+    if not FIsDirectReference then
+    begin
+      // Update original parent if this is a reference
+      if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+      begin
+        if FOriginalParent.FJsonValue is TJSONObject then
+        begin
+          ParentObj := FOriginalParent.AsObject;
+          if ParentObj <> nil then
+          begin
+            // Replace the value in the parent
+            if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+            begin
+              ParentObj.RemovePair(FOriginalKey).Free;
+              ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+            end;
+          end;
+        end
+        else if FOriginalParent.FJsonValue is TJSONArray then
+        begin
+          ParentArray := FOriginalParent.AsArray;
+          if ParentArray <> nil then
+          begin
+            if TryStrToInt(FOriginalKey, ArrIndex) then
+            begin
+              // Replace the value in the parent array
+              if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+              begin
+                if ParentArray.Items[ArrIndex] <> FJsonValue then
+                begin
+                  ParentArray.Items[ArrIndex].Free;
+                  ParentArray.Remove(ArrIndex);
+                  ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
   Result := Self;
 end;
 
 function TEasyJson.&Set(const AKey: string; const AJSONValue: TJSONValue): TEasyJson;
 var
-  LObj: TJSONObject;
+  LObj, ParentObj: TJSONObject;
+  ParentArray: TJSONArray;
   LClone: TJSONValue;
+  ArrIndex: Integer;
 begin
-  LObj := AsObject();
+  LObj := AsObject;
   if (LObj <> nil) and (AJSONValue <> nil) then
   begin
     LClone := AJSONValue.Clone as TJSONValue;
     SafeAddPair(LObj, AKey, LClone);
+
+    // If this is a direct reference, no need to update the original parent
+    if not FIsDirectReference then
+    begin
+      // Update original parent if this is a reference
+      if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+      begin
+        if FOriginalParent.FJsonValue is TJSONObject then
+        begin
+          ParentObj := FOriginalParent.AsObject;
+          if ParentObj <> nil then
+          begin
+            // Replace the value in the parent
+            if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+            begin
+              ParentObj.RemovePair(FOriginalKey).Free;
+              ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+            end;
+          end;
+        end
+        else if FOriginalParent.FJsonValue is TJSONArray then
+        begin
+          ParentArray := FOriginalParent.AsArray;
+          if ParentArray <> nil then
+          begin
+            if TryStrToInt(FOriginalKey, ArrIndex) then
+            begin
+              // Replace the value in the parent array
+              if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+              begin
+                if ParentArray.Items[ArrIndex] <> FJsonValue then
+                begin
+                  ParentArray.Items[ArrIndex].Free;
+                  ParentArray.Remove(ArrIndex);
+                  ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
   end;
   Result := Self;
 end;
 
 function TEasyJson.&Set(const AIndex: Integer; const AValue: Variant): TEasyJson;
 var
-  LArray: TJSONArray;
+  LArray, ParentArray: TJSONArray;
+  ParentObj: TJSONObject;
   LValue: TJSONValue;
+  ArrIndex: Integer;
 begin
-  LArray := AsArray();
+  LArray := AsArray;
   if LArray <> nil then
   begin
     // Ensure array has enough elements
@@ -1515,34 +1980,140 @@ begin
     if (AIndex >= 0) and (AIndex < LArray.Count) then
     begin
       // Free the old value
-      LArray.Items[AIndex].Free();
+      LArray.Items[AIndex].Free;
 
       // Replace it - direct assignment doesn't work, so we need to remove and add
       LArray.Remove(AIndex);
-      LArray.AddElement(LValue); // Changed Add to AddElement
+      LArray.AddElement(LValue);
+
+      // If this is a direct reference, no need to update the original parent
+      if not FIsDirectReference then
+      begin
+        // Update original parent if this is a reference
+        if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+        begin
+          if FOriginalParent.FJsonValue is TJSONObject then
+          begin
+            ParentObj := FOriginalParent.AsObject;
+            if ParentObj <> nil then
+            begin
+              // Replace the value in the parent
+              if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+              begin
+                ParentObj.RemovePair(FOriginalKey).Free;
+                ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+              end;
+            end;
+          end
+          else if FOriginalParent.FJsonValue is TJSONArray then
+          begin
+            ParentArray := FOriginalParent.AsArray;
+            if ParentArray <> nil then
+            begin
+              if TryStrToInt(FOriginalKey, ArrIndex) then
+              begin
+                // Replace the value in the parent array
+                if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+                begin
+                  if ParentArray.Items[ArrIndex] <> FJsonValue then
+                  begin
+                    ParentArray.Items[ArrIndex].Free;
+                    ParentArray.Remove(ArrIndex);
+                    ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
     end;
   end;
   Result := Self;
 end;
 
 function TEasyJson.&Set(const AIndex: Integer; const AJson: TEasyJson): TEasyJson;
+var
+  LArray, ParentArray: TJSONArray;
+  ParentObj: TJSONObject;
+  LClone: TJSONValue;
+  ArrIndex: Integer;
 begin
-  if (AJson <> nil) and (AJson.FJsonValue <> nil) then
-    &Set(AIndex, AJson.FJsonValue.Clone as TJSONValue)
-  else
-    &Set(AIndex, TJSONNull.Create);
+  LArray := AsArray;
+  if (LArray <> nil) and (AJson <> nil) and (AJson.FJsonValue <> nil) then
+  begin
+    // Ensure array has enough elements
+    GetOrCreateArray(LArray, AIndex);
 
+    // Clone the value
+    LClone := AJson.FJsonValue.Clone as TJSONValue;
+
+    // Replace the element
+    if (AIndex >= 0) and (AIndex < LArray.Count) then
+    begin
+      // Free the old value
+      LArray.Items[AIndex].Free;
+
+      // Replace it - direct assignment doesn't work, so we need to remove and add
+      LArray.Remove(AIndex);
+      LArray.AddElement(LClone);
+
+      // If this is a direct reference, no need to update the original parent
+      if not FIsDirectReference then
+      begin
+        // Update original parent if this is a reference
+        if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+        begin
+          if FOriginalParent.FJsonValue is TJSONObject then
+          begin
+            ParentObj := FOriginalParent.AsObject;
+            if ParentObj <> nil then
+            begin
+              // Replace the value in the parent
+              if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+              begin
+                ParentObj.RemovePair(FOriginalKey).Free;
+                ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+              end;
+            end;
+          end
+          else if FOriginalParent.FJsonValue is TJSONArray then
+          begin
+            ParentArray := FOriginalParent.AsArray;
+            if ParentArray <> nil then
+            begin
+              if TryStrToInt(FOriginalKey, ArrIndex) then
+              begin
+                // Replace the value in the parent array
+                if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+                begin
+                  if ParentArray.Items[ArrIndex] <> FJsonValue then
+                  begin
+                    ParentArray.Items[ArrIndex].Free;
+                    ParentArray.Remove(ArrIndex);
+                    ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
   Result := Self;
 end;
 
 function TEasyJson.&Set(const AIndex: Integer; const AJSONValue: TJSONValue): TEasyJson;
 var
-  LArray: TJSONArray;
+  LArray, ParentArray: TJSONArray;
+  ParentObj: TJSONObject;
   LClone: TJSONValue;
-  LNewArray: TJSONArray;
+  ArrIndex: Integer;
+  NewArray: TJSONArray;
   I: Integer;
 begin
-  LArray := AsArray();
+  LArray := AsArray;
   if (LArray <> nil) and (AJSONValue <> nil) then
   begin
     // Ensure array has enough elements
@@ -1555,36 +2126,79 @@ begin
     if (AIndex >= 0) and (AIndex < LArray.Count) then
     begin
       // Create a new array with the updated element at the correct position
-      LNewArray := TJSONArray.Create();
+      NewArray := TJSONArray.Create;
       try
         for I := 0 to LArray.Count - 1 do
         begin
           if I = AIndex then
-            LNewArray.AddElement(LClone)
+            NewArray.AddElement(LClone)
           else
-            LNewArray.AddElement(LArray.Items[I].Clone as TJSONValue);
+            NewArray.AddElement(LArray.Items[I].Clone as TJSONValue);
         end;
 
         // Replace the original array with the new one
         if FJsonValue = LArray then
         begin
-          FJsonValue.Free();
-          FJsonValue := LNewArray;
+          FJsonValue.Free;
+          FJsonValue := NewArray;
+
+          // If this is a direct reference, no need to update the original parent
+          if not FIsDirectReference then
+          begin
+            // Update original parent if this is a reference
+            if (FOriginalParent <> nil) and (FOriginalKey <> '') then
+            begin
+              if FOriginalParent.FJsonValue is TJSONObject then
+              begin
+                ParentObj := FOriginalParent.AsObject;
+                if ParentObj <> nil then
+                begin
+                  // Replace the value in the parent
+                  if ParentObj.GetValue(FOriginalKey) <> FJsonValue then
+                  begin
+                    ParentObj.RemovePair(FOriginalKey).Free;
+                    ParentObj.AddPair(FOriginalKey, FJsonValue.Clone as TJSONValue);
+                  end;
+                end;
+              end
+              else if FOriginalParent.FJsonValue is TJSONArray then
+              begin
+                ParentArray := FOriginalParent.AsArray;
+                if ParentArray <> nil then
+                begin
+                  if TryStrToInt(FOriginalKey, ArrIndex) then
+                  begin
+                    // Replace the value in the parent array
+                    if (ArrIndex >= 0) and (ArrIndex < ParentArray.Count) then
+                    begin
+                      if ParentArray.Items[ArrIndex] <> FJsonValue then
+                      begin
+                        ParentArray.Items[ArrIndex].Free;
+                        ParentArray.Remove(ArrIndex);
+                        ParentArray.AddElement(FJsonValue.Clone as TJSONValue);
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
         end
         else
         begin
           // This is a complex case - we'd need to find and replace the array in its parent
-          LNewArray.Free();
+          NewArray.Free;
+          LClone.Free;
         end;
       except
-        LNewArray.Free;
+        NewArray.Free;
         LClone.Free;
         raise;
       end;
     end
     else
     begin
-      LClone.Free(); // Clean up if we didn't use it
+      LClone.Free; // Clean up if we didn't use it
     end;
   end;
   Result := Self;

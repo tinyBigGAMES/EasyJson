@@ -633,6 +633,164 @@ begin
 end;
 
 (*=============================================================================
+  Test12: Working with JSON Paths and Modifications
+  This procedure demonstrates how to manipulate and navigate a complex JSON
+  structure using TEasyJson. It covers various techniques for accessing,
+  modifying, and validating JSON data with both bracket notation and the Path
+  property.
+
+  The initial JSON structure:
+  {
+    "candidates": [
+      {
+        "index": 0,
+        "finishReason": "STOP",
+        "content": {
+          "parts": [
+            { "text": "Hello, this is a sample response" }
+          ]
+        }
+      }
+    ],
+    "created": 1621459200
+  }
+
+  Key Features Demonstrated:
+  - Creating a nested JSON structure with arrays and objects.
+  - Using `HasPath()` to check if a key exists.
+  - Retrieving values using both bracket notation and `Path[]`.
+  - Modifying nested values using `Path[].Set()`.
+  - Adding new properties dynamically using `Path[].Set()`.
+  - Adding new objects to arrays using `Path[].AddObject()`.
+  - Handling non-existent paths gracefully.
+
+  Expected Output:
+  - Various messages confirming the existence or modification of JSON keys.
+  - The final JSON structure after multiple modifications.
+
+  NOTE: This example highlights the power of TEasyJson in handling complex
+        JSON structures while maintaining readability and flexibility.
+==============================================================================*)
+procedure Test12;
+var
+  Json: TEasyJson;
+  Text, PreText: string;
+begin
+  // Create a nested JSON structure with arrays and objects
+  Json := TEasyJson.Create;
+  try
+    // Build a complex nested structure similar to an API response
+    Json.AddArray('candidates')
+      .AddObject
+        .&Set('index', 0)
+        .&Set('finishReason', 'STOP')
+        .AddObject('content')
+          .AddArray('parts')
+            .AddObject
+              .&Set('text', 'Hello, this is a sample response')
+            .Back
+          .Back
+        .Back
+      .Back
+    .&Set('created', 1621459200);
+
+    // Print the original JSON structure
+    WriteLn('Original JSON:');
+    WriteLn(Json.Format);
+    WriteLn;
+
+    // Example 1: Using HasPath and traditional bracket notation
+    WriteLn('Example 1: Using HasPath and bracket notation');
+    if Json.HasPath('candidates[0].content.parts[0].text') then
+    begin
+      Text := Json['candidates'][0]['content']['parts'][0]['text'].AsString;
+      WriteLn('Text found: ' + Text);
+    end
+    else
+      WriteLn('Path not found');
+    WriteLn;
+
+    // Example 2: Using HasPath and Path property
+    WriteLn('Example 2: Using HasPath and Path property');
+    if Json.HasPath('candidates[0].content.parts[0].text') then
+    begin
+      Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
+      WriteLn('Text found: ' + Text);
+    end
+    else
+      WriteLn('Path not found');
+    WriteLn;
+
+    // Example 3: Checking a path that doesn't exist
+    WriteLn('Example 3: Checking a path that doesn''t exist');
+    if Json.HasPath('candidates[1].content') then
+      WriteLn('Path exists (should not happen)')
+    else
+      WriteLn('Path not found (expected)');
+    WriteLn;
+
+    // Example 4: Accessing a non-existent path returns a null value
+    WriteLn('Example 4: Accessing a non-existent path');
+    Text := Json.Path['candidates[1].content.parts[0].text'].AsString;
+    WriteLn('Result of non-existent path: "' + Text + '"');
+    WriteLn;
+
+    // Example 5: Modifying a nested value using Path and Set
+    WriteLn('Example 5: Modifying a nested value using Path and Set');
+    PreText := Json.Path['candidates[0].content.parts[0].text'].AsString;
+    WriteLn('Before update: ' + PreText);
+
+    Json.Path['candidates[0].content.parts[0]'].&Set('text', 'Updated with Path+Set');
+
+    // Verify the update worked
+    Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
+    WriteLn('After update: ' + Text);
+    WriteLn;
+
+    // Example 6: Modifying a nested value using bracket notation
+    WriteLn('Example 6: Modifying a nested value using bracket notation');
+    Json['candidates'][0]['content']['parts'][0].&Set('text', 'Updated with brackets');
+    Text := Json.Path['candidates[0].content.parts[0].text'].AsString;
+    WriteLn('Updated text: ' + Text);
+    WriteLn;
+
+    // Example 7: Adding a new property to a nested object using Path
+    WriteLn('Example 7: Adding a new property using Path and Set');
+    Json.Path['candidates[0].content'].&Set('newProperty', 'New value via Path+Set');
+
+    if Json.HasPath('candidates[0].content.newProperty') then
+    begin
+      Text := Json.Path['candidates[0].content.newProperty'].AsString;
+      WriteLn('New property value: ' + Text);
+    end
+    else
+      WriteLn('Failed to add new property');
+    WriteLn;
+
+    // Example 8: Complex modification - adding a new object in an array using Path
+    WriteLn('Example 8: Adding a new object to parts array using Path');
+    Json.Path['candidates[0].content.parts'].AddObject.&Set('text', 'Second part text');
+
+    if Json.HasPath('candidates[0].content.parts[1].text') then
+    begin
+      Text := Json.Path['candidates[0].content.parts[1].text'].AsString;
+      WriteLn('New array item text: ' + Text);
+    end
+    else
+      WriteLn('Failed to add new array item');
+    WriteLn;
+
+    // Print the final JSON after modifications
+    WriteLn('Final JSON:');
+    WriteLn(Json.Format);
+
+  finally
+    // Free the JSON object to prevent memory leaks
+    Json.Free;
+  end;
+end;
+
+(*=============================================================================
   RunTests: Execute Test Procedures
   This procedure runs one of the predefined test functions based on the value
   of LNum. It serves as a simple test runner using a case statement to call
@@ -657,6 +815,7 @@ end;
   09 - Test09: Clearing a JSON Object
   10 - Test10: Saving a JSON Object to a File
   11 - Test11: Loading a JSON Object from a File
+  12 - Test12: Working with JSON Paths and Modifications
 
   NOTE: Modify the value of LNum to execute a different test case.
 ==============================================================================*)
@@ -669,7 +828,7 @@ begin
   WriteLn;
 
   // Set the test number to execute (change this to run a different test)
-  LNum := 01;
+  LNum := 12;
 
   // Execute the corresponding test procedure based on LNum
   case LNum of
@@ -684,6 +843,7 @@ begin
     09: Test09();  // Runs Test09
     10: Test10();  // Runs Test10
     11: Test11();  // Runs Test11
+    12: Test12();  // Runs Test12
   end;
 
   // Pause execution to allow the user to review output before termination
