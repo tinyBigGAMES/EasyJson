@@ -91,12 +91,12 @@ begin
           .AddObject(function(AJson: TEasyJson): TEasyJson
             begin
               // Insert an object with a "text" field containing a query
-              Result := AJson.&Set('text', 'Who is Bill Gates?');
+              Result := AJson.Put('text', 'Who is Bill Gates?');
             end)
           .AddObject(function(AJson: TEasyJson): TEasyJson
             begin
               // Insert another object with a different "text" query
-              Result := AJson.&Set('text', 'Does he have kids?');
+              Result := AJson.Put('text', 'Does he have kids?');
             end);
 
     // Print the formatted JSON output to the console
@@ -219,19 +219,19 @@ begin
   LJson := TEasyJson.Create();
   try
     // Set name and age properties in the JSON object
-    LJson.&Set('name', 'Alice')
-      .&Set('age', 25)
+    LJson.Put('name', 'Alice')
+      .Put('age', 25)
       // Add an array named 'hobbies' and populate it
       .AddArray('hobbies')
-        .&Set(0, 'Reading')
-        .&Set(1, 'Cycling');
+        .Put(0, 'Reading')
+        .Put(1, 'Cycling');
 
     // Print the formatted JSON output
     WriteLn('JSON Object:');
     WriteLn(LJson.Format());
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -270,7 +270,7 @@ begin
     WriteLn(LJson.Format());
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -312,10 +312,10 @@ begin
     LJson := TEasyJson.Create('{"name":"John","age":30}');
 
     // Add a new key-value pair for "email"
-    LJson.&Set('email', 'alice@example.com');
+    LJson.Put('email', 'alice@example.com');
 
     // Update the existing "age" value from 30 to 26
-    LJson.&Set('age', 26);
+    LJson.Put('age', 26);
 
     // Print the formatted JSON output
     WriteLn;
@@ -323,7 +323,7 @@ begin
     WriteLn(LJson.Format());
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -356,9 +356,9 @@ begin
   try
     // Add an array named 'numbers' and populate it with values
     LJson.AddArray('numbers')
-      .&Set(0, 10)
-      .&Set(1, 20)
-      .&Set(2, 30)
+      .Put(0, 10)
+      .Put(1, 20)
+      .Put(2, 30)
       .Back(); // Navigate back to the parent object
 
     // Print the formatted JSON output
@@ -367,7 +367,7 @@ begin
     WriteLn(LJson.Format());
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -406,8 +406,8 @@ begin
     LJson.AddObject('address',
       function(AJson: TEasyJson): TEasyJson
       begin
-        Result := AJson.&Set('city', 'New York')
-                   .&Set('zip', '10001');
+        Result := AJson.Put('city', 'New York')
+                   .Put('zip', '10001');
       end);
 
     // Print the formatted JSON output
@@ -416,7 +416,7 @@ begin
     WriteLn(LJson.Format());
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -459,11 +459,11 @@ begin
   LJson := TEasyJson.Create();
   try
     // Set key-value pairs and add an array of hobbies
-    LJson.&Set('name', 'Alice')
-      .&Set('age', 25)
+    LJson.Put('name', 'Alice')
+      .Put('age', 25)
       .AddArray('hobbies')
-        .&Set(0, 'Reading')
-        .&Set(1, 'Cycling');
+        .Put(0, 'Reading')
+        .Put(1, 'Cycling');
 
     // Print the formatted JSON output
     WriteLn;
@@ -474,11 +474,11 @@ begin
     WriteLn;
     WriteLn('Access JSON Data:');
     WriteLn('name      : ', LJson['name'].AsString);     // Alice
-    WriteLn('age       : ', LJson['age'].AsInteger);    // 25
+    WriteLn('age       : ', LJson['age'].AsInt32);    // 25
     WriteLn('hobbies[1]: ', LJson['hobbies'][1].AsString);  // Cycling
   finally
     // Free the JSON object to prevent memory leaks
-    LJson.Free;
+    LJson.Free();
   end;
 end;
 
@@ -518,7 +518,7 @@ begin
   LJson := TEasyJson.Create();
   try
     // Set initial key-value pairs
-    LJson.&Set('name', 'Alice').&Set('age', 25);
+    LJson.Put('name', 'Alice').Put('age', 25);
 
     // Print the JSON object before clearing
     WriteLn('JSON Object before clear:');
@@ -570,7 +570,7 @@ begin
   LJson := TEasyJson.Create();
   try
     // Set key-value pairs in the JSON object
-    LJson.&Set('name', 'Alice').&Set('age', 25);
+    LJson.Put('name', 'Alice').Put('age', 25);
 
     // Print the formatted JSON output
     WriteLn;
@@ -681,18 +681,18 @@ begin
   try
     // Build a complex nested structure similar to an API response
     LJson.AddArray('candidates')
-      .AddObject
-        .&Set('index', 0)
-        .&Set('finishReason', 'STOP')
+      .AddObject()
+        .Put('index', 0)
+        .Put('finishReason', 'STOP')
         .AddObject('content')
           .AddArray('parts')
-            .AddObject
-              .&Set('text', 'Hello, this is a sample response')
-            .Back
-          .Back
-        .Back
-      .Back
-    .&Set('created', 1621459200);
+            .AddObject()
+              .Put('text', 'Hello, this is a sample response')
+            .Back()
+          .Back()
+        .Back()
+      .Back()
+    .Put('created', 1621459200);
 
     // Print the original JSON structure
     WriteLn('Original JSON:');
@@ -740,7 +740,7 @@ begin
     LPreText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
     WriteLn('Before update: ' + LPreText);
 
-    LJson.Path['candidates[0].content.parts[0]'].&Set('text', 'Updated with Path+Set');
+    LJson.Path['candidates[0].content.parts[0]'].Put('text', 'Updated with Path+Set');
 
     // Verify the update worked
     LText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
@@ -749,14 +749,14 @@ begin
 
     // Example 6: Modifying a nested value using bracket notation
     WriteLn('Example 6: Modifying a nested value using bracket notation');
-    LJson['candidates'][0]['content']['parts'][0].&Set('text', 'Updated with brackets');
+    LJson['candidates'][0]['content']['parts'][0].Put('text', 'Updated with brackets');
     LText := LJson.Path['candidates[0].content.parts[0].text'].AsString();
     WriteLn('Updated text: ' + LText);
     WriteLn;
 
     // Example 7: Adding a new property to a nested object using Path
     WriteLn('Example 7: Adding a new property using Path and Set');
-    LJson.Path['candidates[0].content'].&Set('newProperty', 'New value via Path+Set');
+    LJson.Path['candidates[0].content'].Put('newProperty', 'New value via Path+Set');
 
     if LJson.HasPath('candidates[0].content.newProperty') then
     begin
@@ -769,7 +769,7 @@ begin
 
     // Example 8: Complex modification - adding a new object in an array using Path
     WriteLn('Example 8: Adding a new object to parts array using Path');
-    LJson.Path['candidates[0].content.parts'].AddObject.&Set('text', 'Second part text');
+    LJson.Path['candidates[0].content.parts'].AddObject.Put('text', 'Second part text');
 
     if LJson.HasPath('candidates[0].content.parts[1].text') then
     begin
@@ -791,6 +791,51 @@ begin
 end;
 
 (*=============================================================================
+  Test00: Basic JSON Creation Using Put
+  This procedure demonstrates the use of the `Put` method in TEasyJson to
+  create a simple JSON object with key-value pairs, including nested JSON
+  content.
+
+  The JSON structure generated:
+  {
+    "name": "EasyJson",
+    "version": "1.0.0",  // or current runtime version
+    "features": ["fluent", "lightweight", "delphi"]
+  }
+
+  Steps performed:
+  - A TEasyJson instance is created.
+  - Key-value pairs "name" and "version" are added using `Put`.
+  - A JSON array is inserted as the value of "features" using another TEasyJson instance.
+  - The complete JSON object is printed using `Format()`.
+
+  NOTE: The `Put` method is a shorthand for setting values without chaining.
+        This example shows how to combine `Put` with nested TEasyJson values.
+==============================================================================*)
+procedure Test00();
+var
+  LJson: TEasyJson;
+begin
+  // Create an instance of TEasyJson
+  LJson := TEasyJson.Create();
+  try
+    // Populate the JSON object with values using Put()
+    LJson.Put('name', 'EasyJson')
+         .Put('version', LJson.GetVersion())
+         .AddArray('features')
+           .Put(0, 'fluent')
+           .Put(1, 'lightweight')
+           .Put(2, 'delphi');
+
+    // Print the formatted JSON structure
+    Writeln(LJson.Format());
+  finally
+    // Free the JSON object to prevent memory leaks
+    LJson.Free;
+  end;
+end;
+
+(*=============================================================================
   RunTests: Execute Test Procedures
   This procedure runs one of the predefined test functions based on the value
   of LNum. It serves as a simple test runner using a case statement to call
@@ -804,6 +849,7 @@ end;
     terminating.
 
   Available Tests:
+  00 - Test00: Basic JSON Creation Using Put
   01 - Test01: Creating a JSON Structure
   02 - Test02: Parsing and Extracting JSON Data
   03 - Test03: Creating a Simple JSON Object
@@ -828,10 +874,11 @@ begin
   WriteLn;
 
   // Set the test number to execute (change this to run a different test)
-  LNum := 12;
+  LNum := 00;
 
   // Execute the corresponding test procedure based on LNum
   case LNum of
+    00: Test00();  // Runs Test00
     01: Test01();  // Runs Test01
     02: Test02();  // Runs Test02
     03: Test03();  // Runs Test03
@@ -849,5 +896,6 @@ begin
   // Pause execution to allow the user to review output before termination
   Pause();
 end;
+
 
 end.

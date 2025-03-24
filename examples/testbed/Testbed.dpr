@@ -27,6 +27,7 @@ uses
   EasyJson in '..\..\src\EasyJson.pas';
 
 begin
+  ReportMemoryLeaksOnShutdown := True;
   try
     RunTests();
   except

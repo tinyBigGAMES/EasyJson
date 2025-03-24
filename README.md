@@ -30,11 +30,11 @@ Getting started with `TEasyJson` is quick and easy:
 var EJ: TEasyJson;
 begin
   EJ := TEasyJson.Create;
-  EJ.&Set('name', 'Alice')
-    .&Set('age', 25)
+  EJ.Put('name', 'Alice')
+    .Put('age', 25)
     .AddArray('hobbies')
-    .&Set(0, 'Reading')
-    .&Set(1, 'Cycling');
+    .Put(0, 'Reading')
+    .Put(1, 'Cycling');
 
   WriteLn(EJ.Format());
 end;
@@ -63,8 +63,8 @@ end;
 
 ### 🔹 Adding and Modifying Values
 ```delphi
-EJ.&Set('email', 'alice@example.com');
-EJ.&Set('age', 26); // Updates existing key
+EJ.Put('email', 'alice@example.com');
+EJ.Put('age', 26); // Updates existing key
 ```
 
 ### 🔹 Working with JSON Arrays
@@ -73,9 +73,9 @@ var EJ: TEasyJson;
 begin
   EJ := TEasyJson.Create;
   EJ.AddArray('numbers')
-    .&Set(0, 10)
-    .&Set(1, 20)
-    .&Set(2, 30);
+    .Put(0, 10)
+    .Put(1, 20)
+    .Put(2, 30);
 
   WriteLn(EJ.Format());
 end;
@@ -86,8 +86,8 @@ end;
 EJ.AddObject('address',
   function(E: TEasyJson): TEasyJson
   begin
-    Result := E.&Set('city', 'New York')
-               .&Set('zip', '10001');
+    Result := E.Put('city', 'New York')
+               .Put('zip', '10001');
   end);
 ```
 
@@ -108,8 +108,8 @@ The `TEasyJson` class provides a robust set of methods and properties for seamle
 - `Create(const AJsonValue: TJSONValue)` – Wraps an existing JSON value.  
 
 ### 🔹 Methods
-- `Set(AKey: string; AValue: Variant): TEasyJson` – Adds or updates a key.  
-- `Set(AIndex: Integer; AValue: Variant): TEasyJson` – Sets an array element.  
+- `Put(AKey: string; AValue: Variant): TEasyJson` – Adds or updates a key.  
+- `Put(AIndex: Integer; AValue: Variant): TEasyJson` – Sets an array element.  
 - `Add(AKey: string; AValue: Variant): TEasyJson` – Adds a new key-value pair.  
 - `AddArray(AKey: string): TEasyJson` – Adds an empty array.  
 - `AddObject(AKey: string; AFunc: TFunc<TEasyJson, TEasyJson>): TEasyJson` – Adds a nested object.  
@@ -117,12 +117,14 @@ The `TEasyJson` class provides a robust set of methods and properties for seamle
 - `Format(): string` – Returns formatted JSON.  
 - `Count(): Integer` – Returns the number of elements.  
 - `AsString(): string` – Converts a JSON value to a string.  
-- `AsInteger(): Integer` – Converts a JSON value to an integer.  
+- `AsInt32r(): Int32` – Converts a JSON value to an int32.  
 - `AsFloat(): Double` – Converts a JSON value to a float.  
 - `AsBoolean(): Boolean` – Converts a JSON value to a boolean.  
 
 ### 🔹 Properties
 - `Items[AKeyOrIndex: Variant]: TEasyJson` – Accesses elements by key or index.  
+
+See `EasyJson.pas` for the full documented API.
 
 ## 💬 Support & Resources
 
