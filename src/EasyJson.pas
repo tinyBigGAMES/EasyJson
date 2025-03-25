@@ -60,14 +60,14 @@ type
   ///   var EJ: TEasyJson;
   ///   begin
   ///     EJ := TEasyJson.Create;
-  ///     EJ.Set('name', 'Alice')
-  ///       .Set('age', 25)
+  ///     EJ.Put('name', 'Alice')
+  ///       .Put('age', 25)
   ///       .AddArray('hobbies')
-  ///         .Set(0, 'Reading')
-  ///         .Set(1, 'Cycling')
+  ///         .Put(0, 'Reading')
+  ///         .Put(1, 'Cycling')
   ///       .AddObject('address')
-  ///         .Set('city', 'New York')
-  ///         .Set('zipcode', '10001');
+  ///         .Put('city', 'New York')
+  ///         .Put('zipcode', '10001');
   ///
   ///     ShowMessage(EJ.Format);
   ///   end;
@@ -122,7 +122,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -179,7 +179,7 @@ type
     ///   begin
     ///     JSONValue := TJSONObject.Create;
     ///     EJ := TEasyJson.Create(JSONValue, ejOwned);
-    ///     EJ.Set('name', 'Bob');
+    ///     EJ.Put('name', 'Bob');
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -191,7 +191,7 @@ type
     ///   begin
     ///     JSONValue := TJSONObject.Create;
     ///     EJ := TEasyJson.Create(JSONValue, ejReference);
-    ///     EJ.Set('name', 'Charlie');
+    ///     EJ.Put('name', 'Charlie');
     ///     ShowMessage(JSONValue.ToString); // JSONValue still exists after EJ is freed
     ///     EJ.Free;
     ///     JSONValue.Free; // Caller must free the referenced value
@@ -226,7 +226,7 @@ type
     ///   begin
     ///     ParentJson := TEasyJson.Create;
     ///     SubJson := TEasyJson.Create(ParentJson.AddObject('address'), ParentJson, ejReference);
-    ///     SubJson.Set('city', 'New York').Set('zipcode', '10001');
+    ///     SubJson.Put('city', 'New York').Put('zipcode', '10001');
     ///     ShowMessage(ParentJson.Format);
     ///   end;
     ///   </code>
@@ -258,7 +258,7 @@ type
     ///   begin
     ///     EJ := TEasyJson.Create;
     ///     try
-    ///       EJ.Set('name', 'Alice');
+    ///       EJ.Put('name', 'Alice');
     ///       ShowMessage(EJ.Format);
     ///     finally
     ///       EJ.Free; // Automatically frees the JSON structure
@@ -282,7 +282,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(EJ.Format); // Outputs JSON with data
     ///
     ///     EJ.Clear;
@@ -341,7 +341,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     if EJ.SaveToFile('C:\output.json') then
     ///       ShowMessage('JSON saved successfully')
     ///     else
@@ -374,7 +374,7 @@ type
     ///   begin
     ///     EJ := TEasyJson.Create;
     ///     EJ.AddObject('candidates')
-    ///       .AddArray.Set(0, TEasyJson.Create.Set('content', TEasyJson.Create.Set('newProperty', 'value')));
+    ///       .AddArray.Put(0, TEasyJson.Create.Put('content', TEasyJson.Create.Put('newProperty', 'value')));
     ///
     ///     if EJ.HasPath('candidates[0].content.newProperty') then
     ///       ShowMessage('Property exists')
@@ -411,7 +411,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -446,8 +446,8 @@ type
     ///   begin
     ///     ParentJson := TEasyJson.Create;
     ///     ChildJson := TEasyJson.Create;
-    ///     ChildJson.Set('city', 'New York').Set('zipcode', '10001');
-    ///     ParentJson.Set('address', ChildJson);
+    ///     ChildJson.Put('city', 'New York').Put('zipcode', '10001');
+    ///     ParentJson.Put('address', ChildJson);
     ///     ShowMessage(ParentJson.Format);
     ///   end;
     ///   </code>
@@ -498,7 +498,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.AddArray('numbers').Set(0, 10).Set(1, 20);
+    ///     EJ.AddArray('numbers').Put(0, 10).Put(1, 20);
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -597,7 +597,7 @@ type
     ///   begin
     ///     ParentJson := TEasyJson.Create;
     ///     ChildJson := TEasyJson.Create;
-    ///     ChildJson.Set('city', 'New York').Set('zipcode', '10001');
+    ///     ChildJson.Put('city', 'New York').Put('zipcode', '10001');
     ///     ParentJson.Add('address', ChildJson);
     ///     ShowMessage(ParentJson.Format);
     ///   end;
@@ -706,8 +706,8 @@ type
     ///     EJ := TEasyJson.Create;
     ///     EJ.AddArray('people')
     ///       .AddObject
-    ///       .Set('name', 'Alice')
-    ///       .Set('age', 25);
+    ///       .Put('name', 'Alice')
+    ///       .Put('age', 25);
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -744,7 +744,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.AddObject('address').Set('city', 'New York').Set('zipcode', '10001');
+    ///     EJ.AddObject('address').Put('city', 'New York').Put('zipcode', '10001');
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -784,8 +784,8 @@ type
     ///       function(EJ: TEasyJson): TEasyJson
     ///       begin
     ///         Result := EJ
-    ///           .Set('name', 'John')
-    ///           .Set('age', 30);
+    ///           .Put('name', 'John')
+    ///           .Put('age', 30);
     ///       end);
     ///     ShowMessage(EJ.Format);
     ///   end;
@@ -823,8 +823,8 @@ type
     ///         function(EJ: TEasyJson): TEasyJson
     ///         begin
     ///           Result := EJ
-    ///             .Set('name', 'Alice')
-    ///             .Set('age', 25);
+    ///             .Put('name', 'Alice')
+    ///             .Put('age', 25);
     ///         end);
     ///     ShowMessage(EJ.Format);
     ///   end;
@@ -925,10 +925,10 @@ type
     ///   begin
     ///     EJ := TEasyJson.Create;
     ///     EJ.AddObject('person')
-    ///       .Set('name', 'Alice')
-    ///       .Set('age', 25)
+    ///       .Put('name', 'Alice')
+    ///       .Put('age', 25)
     ///       .Back()  // Navigates back to the root
-    ///       .Set('status', 'active');
+    ///       .Put('status', 'active');
     ///
     ///     ShowMessage(EJ.Format);
     ///   end;
@@ -966,10 +966,10 @@ type
     ///     EJ := TEasyJson.Create;
     ///     EJ.AddObject('company')
     ///       .AddObject('address')
-    ///         .Set('city', 'New York')
-    ///         .Set('zipcode', '10001')
+    ///         .Put('city', 'New York')
+    ///         .Put('zipcode', '10001')
     ///         .Root()  // Navigates back to the root
-    ///       .Set('name', 'TechCorp');
+    ///       .Put('name', 'TechCorp');
     ///
     ///     ShowMessage(EJ.Format);
     ///   end;
@@ -1007,7 +1007,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(IntToStr(EJ.Count)); // Outputs: 2
     ///   end;
     ///   </code>
@@ -1030,7 +1030,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(EJ.ToString);
     ///     // Outputs: {"name":"Alice","age":25}
     ///   end;
@@ -1058,7 +1058,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'Alice').Set('age', 25);
+    ///     EJ.Put('name', 'Alice').Put('age', 25);
     ///     ShowMessage(EJ.Format);
     ///   end;
     ///   </code>
@@ -1135,7 +1135,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('bigValue', 9223372036854775807);
+    ///     EJ.Put('bigValue', 9223372036854775807);
     ///     ShowMessage(IntToStr(EJ['bigValue'].AsInt64)); // Outputs: 9223372036854775807
     ///   end;
     ///   </code>
@@ -1160,7 +1160,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('unsignedValue', '18446744073709551615');
+    ///     EJ.Put('unsignedValue', '18446744073709551615');
     ///     ShowMessage(UIntToStr(EJ['unsignedValue'].AsUInt64)); // Outputs: 18446744073709551615
     ///   end;
     ///   </code>
@@ -1241,7 +1241,7 @@ type
     ///       Arr: TJSONArray;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.AddArray('values').Set(0, 10).Set(1, 20);
+    ///     EJ.AddArray('values').Put(0, 10).Put(1, 20);
     ///     Arr := EJ['values'].AsArray;
     ///     ShowMessage(IntToStr(Arr.Items[1].AsType<Integer>)); // Outputs: 20
     ///   end;
@@ -1266,7 +1266,7 @@ type
     ///       JVal: TJSONValue;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('active', True);
+    ///     EJ.Put('active', True);
     ///     JVal := EJ['active'].AsJSONValue;
     ///     ShowMessage(JVal.ToString); // Outputs: true
     ///   end;
@@ -1335,7 +1335,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Set('name', 'John').Set('age', 30);
+    ///     EJ.Put('name', 'John').Put('age', 30);
     ///     ShowMessage(EJ['name'].AsString); // Outputs: John
     ///   end;
     ///   </code>
@@ -1345,7 +1345,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.AddArray('numbers').Set(0, 10).Set(1, 20);
+    ///     EJ.AddArray('numbers').Put(0, 10).Put(1, 20);
     ///     ShowMessage(IntToStr(EJ['numbers'][1].AsInteger)); // Outputs: 20
     ///   end;
     ///   </code>
@@ -1375,7 +1375,7 @@ type
     ///   var EJ: TEasyJson;
     ///   begin
     ///     EJ := TEasyJson.Create;
-    ///     EJ.Path['candidates[0].content.newProperty'] := TEasyJson.Create.Set('value', 123);
+    ///     EJ.Path['candidates[0].content.newProperty'] := TEasyJson.Create.Put('value', 123);
     ///
     ///     if EJ.HasPath('candidates[0].content.newProperty') then
     ///       ShowMessage(EJ.Path['candidates[0].content.newProperty']['value'].AsString);
@@ -1418,8 +1418,8 @@ type
     ///     for I := 1 to 3 do
     ///     begin
     ///       EJ.Anchor.AddObject
-    ///         .Set('id', I)
-    ///         .Set('label', 'Item ' + IntToStr(I));
+    ///         .Put('id', I)
+    ///         .Put('label', 'Item ' + IntToStr(I));
     ///     end;
     ///
     ///     ShowMessage(EJ.Format);
